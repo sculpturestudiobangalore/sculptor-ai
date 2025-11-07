@@ -20,71 +20,81 @@ export default function Home() {
   }, [messages])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
+  e.preventDefault()
+  if (!input.trim() || isLoading) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-    }
-
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
-    setInput('')
-    setIsLoading(true)
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: updatedMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-
-      if (!response.body) {
-        throw new Error('No response body')
-      }
-
-      // ✅ NEW: Handle complete text response (not streaming)
-      const text = await response.text()
-
-      if (!text || text.trim() === '') {
-        throw new Error('Empty response from API')
-      }
-
-      // ✅ Add AI response to messages
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: text,
-      }
-
-      setMessages((prev) => [...prev, aiMessage])
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      console.error('Chat error:', error)
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 2).toString(),
-          role: 'assistant',
-          content: `❌ Error: ${errorMessage}`,
-        },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    role: 'user',
+    content: input,
   }
+
+  const updatedMessages = [...messages, userMessage]
+  setMessages(updatedMessages)
+  setInput('')
+  setIsLoading(true)
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: updatedMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      }),
+    })
+
+    if (!response.ok) throw new Error('API error')
+
+    if (!response.body) throw new Error('No response body')
+    
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let fullText = ''
+    let messageAdded = false
+    const aiMessageId = (Date.now() + 1).toString()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value, { stream: true })
+      fullText += chunk
+
+      if (!messageAdded) {
+        setMessages((prev) => [...prev, {
+          id: aiMessageId,
+          role: 'assistant',
+          content: chunk,
+        }])
+        messageAdded = true
+      } else {
+        setMessages((prev) => {
+          const updated = [...prev]
+          const lastMsg = updated[updated.length - 1]
+          if (lastMsg?.id === aiMessageId) {
+            lastMsg.content += chunk
+          }
+          return updated
+        })
+      }
+    }
+  } catch (error) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: (Date.now() + 2).toString(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'Unknown'}`,
+      },
+    ])
+  } finally {
+    setIsLoading(false)
+  }
+}
+
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-purple-900">
@@ -92,8 +102,8 @@ export default function Home() {
         <div className="max-w-4xl mx-auto flex items-center gap-3">
           <Sparkles className="w-6 h-6 text-blue-400" />
           <div>
-            <h1 className="text-xl font-bold text-white">SculptorAI</h1>
-            <p className="text-sm text-purple-300">Your intelligent studio assistant</p>
+            <h1 className="text-xl font-bold text-white">Sculpture AI</h1>
+            <p className="text-sm text-purple-300">Your intelligent workshop assistant</p>
           </div>
         </div>
       </div>
