@@ -1,7 +1,8 @@
 'use client'
 
 import React from 'react'
-import { ProjectCard, InvoiceCard, TaskCard, LowStockAlert, DailyPlanSummary } from '@/components/ui-cards'
+// NOTE: These components were removed during tool-card.tsx refactoring
+// import { ProjectCard, InvoiceCard, TaskCard, LowStockAlert, DailyPlanSummary } from '@/components/tool-card'
 
 // Types for our AI response data
 type AIResponseData = {
@@ -12,17 +13,17 @@ type AIResponseData = {
 // Parse AI response to extract structured data
 export function parseAIResponse(text: string): AIResponseData[] {
   const results: AIResponseData[] = []
-  
+
   try {
     // Look for JSON blocks in the response
     const jsonMatches = text.match(/```json\n([\s\S]*?)\n```/g)
-    
+
     if (jsonMatches) {
       jsonMatches.forEach(match => {
         try {
           const jsonStr = match.replace(/```json\n/, '').replace(/\n```/, '')
           const data = JSON.parse(jsonStr)
-          
+
           if (data.type && data.content) {
             results.push(data)
           }
@@ -31,7 +32,7 @@ export function parseAIResponse(text: string): AIResponseData[] {
         }
       })
     }
-    
+
     // Add any remaining text as text content
     const textWithoutJson = text.replace(/```json\n[\s\S]*?\n```/g, '').trim()
     if (textWithoutJson) {
@@ -47,14 +48,14 @@ export function parseAIResponse(text: string): AIResponseData[] {
       content: text
     })
   }
-  
+
   return results
 }
 
 // Main component to render AI responses with cards
 export function AIResponseRenderer({ content }: { content: string }) {
   const responseData = parseAIResponse(content)
-  
+
   return (
     <div className="space-y-4">
       {responseData.map((item, index) => {
@@ -65,42 +66,19 @@ export function AIResponseRenderer({ content }: { content: string }) {
                 {item.content}
               </div>
             )
-            
+
+          // TODO: Re-implement these using the new renderer components
           case 'project-card':
-            return (
-              <div key={index} className="my-4">
-                <ProjectCard {...item.content} />
-              </div>
-            )
-            
           case 'invoice-card':
-            return (
-              <div key={index} className="my-4">
-                <InvoiceCard {...item.content} />
-              </div>
-            )
-            
           case 'task-card':
-            return (
-              <div key={index} className="my-4">
-                <TaskCard {...item.content} />
-              </div>
-            )
-            
           case 'low-stock-alert':
-            return (
-              <div key={index} className="my-4">
-                <LowStockAlert {...item.content} />
-              </div>
-            )
-            
           case 'daily-plan-summary':
             return (
-              <div key={index} className="my-4">
-                <DailyPlanSummary {...item.content} />
+              <div key={index} className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                {typeof item.content === 'string' ? item.content : JSON.stringify(item.content)}
               </div>
             )
-            
+
           default:
             return (
               <div key={index} className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">

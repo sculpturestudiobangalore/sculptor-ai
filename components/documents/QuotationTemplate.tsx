@@ -113,7 +113,7 @@ export const QuotationTemplate = ({ data }: { data: QuotationData }) => (
           <Text style={[styles.description, { color: 'white' }]}>Description</Text>
           <Text style={[styles.amount, { color: 'white' }]}>Amount (₹)</Text>
         </View>
-        
+
         {data.items.map((item, index) => (
           <View style={styles.row} key={index}>
             <Text style={styles.description}>{item.description}</Text>
@@ -126,12 +126,12 @@ export const QuotationTemplate = ({ data }: { data: QuotationData }) => (
           <Text style={styles.description}>Subtotal</Text>
           <Text style={styles.amount}>₹{data.subtotal.toLocaleString('en-IN')}</Text>
         </View>
-        
+
         <View style={styles.row}>
-          <Text style={styles.description}>Tax (18%)</Text>
+          <Text style={styles.description}>Tax (12%)</Text>
           <Text style={styles.amount}>₹{data.tax.toLocaleString('en-IN')}</Text>
         </View>
-        
+
         <View style={styles.totalRow}>
           <Text style={styles.description}>TOTAL</Text>
           <Text style={styles.amount}>₹{data.total.toLocaleString('en-IN')}</Text>

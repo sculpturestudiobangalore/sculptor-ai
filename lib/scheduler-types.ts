@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export interface Tool {
   name: string;
@@ -10,12 +10,12 @@ export interface Tool {
 export interface Task {
   id: string;
   name: string;
-  project_id: string;
+  project_name: string;
   template_id: string;
   estimated_hours: number;
   dependencies: string[];
   assigned_to: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'postponed';
+  status: "pending" | "in_progress" | "completed" | "postponed";
   required_materials: { material: string; quantity: number }[];
   required_skills: string[];
 }
@@ -35,9 +35,9 @@ export interface ParallelWork {
 }
 
 export interface Constraint {
-  type: 'material' | 'vendor' | 'team' | 'equipment' | 'weather';
+  type: "material" | "vendor" | "team" | "equipment" | "weather";
   message: string;
-  severity: 'blocker' | 'warning' | 'info';
+  severity: "blocker" | "warning" | "info";
 }
 
 export interface OptimizedSchedule {

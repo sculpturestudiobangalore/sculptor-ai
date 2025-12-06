@@ -122,7 +122,7 @@ export const InvoiceTemplate = ({ data }: { data: InvoiceData }) => (
           <Text style={[styles.rate, { color: 'white' }]}>Rate (₹)</Text>
           <Text style={[styles.amount, { color: 'white' }]}>Amount (₹)</Text>
         </View>
-        
+
         {data.items.map((item, index) => (
           <View style={styles.row} key={index}>
             <Text style={styles.description}>{item.description}</Text>
@@ -139,14 +139,14 @@ export const InvoiceTemplate = ({ data }: { data: InvoiceData }) => (
           <Text style={styles.rate}></Text>
           <Text style={styles.amount}>₹{data.subtotal.toLocaleString('en-IN')}</Text>
         </View>
-        
+
         <View style={styles.row}>
-          <Text style={styles.description}>Tax (18%)</Text>
+          <Text style={styles.description}>Tax (12%)</Text>
           <Text style={styles.quantity}></Text>
           <Text style={styles.rate}></Text>
           <Text style={styles.amount}>₹{data.tax.toLocaleString('en-IN')}</Text>
         </View>
-        
+
         <View style={styles.totalRow}>
           <Text style={styles.description}>TOTAL</Text>
           <Text style={styles.quantity}></Text>

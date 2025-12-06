@@ -1,36 +1,27 @@
-import { generateText } from 'ai'
+import { openai } from '@ai-sdk/openai'
 import { google } from '@ai-sdk/google'
+import { streamText, convertToModelMessages } from 'ai'
+import { aiTools } from '@/lib/ai-tools/index'
 
-export const maxDuration = 60
+export const maxDuration = 30
 
 export async function POST(req: Request) {
-  try {
-    const { messages } = await req.json()
+  const { messages, metadata } = await req.json()
 
-    const { text } = await generateText({
-      model: google('gemini-2.5-flash'),
-      messages,
-      system: `You are SculptorAI, an AI operations assistant for a sculpture studio managing projects, clients, tasks, materials, work logs, quotations, invoices, payments, and team planning.
+  // Get model from metadata (sent from frontend)
+  const modelId = metadata?.model || 'gemini-2.5-flash'
 
-You can help with:
-- Client management and communication
-- Project planning and progress tracking
-- Task creation and status updates
-- Material inventory management
-- Work hours logging
-- Quotation and invoice generation
-- Payment processing
-- Team scheduling and planning
-- Business analytics and reporting
+  // Determine provider dynamically
+  let modelProvider
+  if (modelId.startsWith('gemini')) modelProvider = google(modelId)
+  else if (modelId.startsWith('gpt')) modelProvider = openai(modelId)
+  else throw new Error(`Unsupported model: ${modelId}`)
 
-Provide helpful, accurate information about the sculpture studio operations.`,
-    })
+  const result = streamText({
+    model: modelProvider,
+    messages: convertToModelMessages(messages),
+    tools: aiTools,
+  })
 
-    return new Response(text || 'No response', {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-    })
-  } catch (error) {
-    console.error('❌ API error:', error)
-    return new Response(`Error: ${String(error)}`, { status: 500 })
-  }
+  return result.toUIMessageStreamResponse()
 }

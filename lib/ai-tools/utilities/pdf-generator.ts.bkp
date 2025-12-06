@@ -1,0 +1,964 @@
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+
+export interface InvoiceData {
+  invoiceNumber: string;
+  date: string;
+  dueDate: string;
+  client: {
+    name: string;
+    address: string;
+    phone: string;
+  };
+  project: {
+    name: string;
+    type: string;
+    deadline: string;
+  };
+  items: Array<{
+    description: string;
+    quantity?: number;
+    rate?: number;
+    amount: number;
+  }>;
+  subtotal: number;
+  tax: number;
+  total: number;
+  advancePaid: number;
+  balanceDue: number;
+  terms: string;
+}
+
+export interface QuotationLineItem {
+  name?: string;
+  description?: string;
+  hsnSacCode?: string;
+  quantity?: number;
+  estimatedWeight?: number;
+  unit?: string;
+  rate: number;
+  total: number;
+  notes?: string;
+  material?: string;
+  finish?: string;
+  optionType?: string;
+}
+
+export interface QuotationData {
+  quotationNumber: string;
+  date: string;
+  validUntil: string;
+  client: {
+    name: string;
+    address: string;
+    phone: string;
+  };
+  project: {
+    name: string;
+    type: string;
+    deadline: string;
+  };
+  items: QuotationLineItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  terms?: string;
+}
+
+export class PDFGenerator {
+  static async generateInvoice(invoiceData: InvoiceData): Promise<Uint8Array> {
+    try {
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([595, 842]);
+      const { width, height } = page.getSize();
+
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      const margin = { left: 50, right: 50, top: 50, bottom: 50 };
+      const contentWidth = width - margin.left - margin.right;
+      let yPosition = height - margin.top;
+
+      // ===== HEADER =====
+      page.drawText("Sculpture Studio", {
+        x: margin.left,
+        y: yPosition,
+        size: 20,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      yPosition -= 10;
+
+      page.drawText("#343/3, 13th 'B' Cross, Vyalikaval, Bangalore-560003", {
+        x: margin.left,
+        y: yPosition,
+        size: 9,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+      yPosition -= 12;
+
+      page.drawText(
+        "Phone: (+91) 9632390070 | Email: mdsculpturestudio@gmail.com",
+        {
+          x: margin.left,
+          y: yPosition,
+          size: 9,
+          font,
+          color: rgb(0.4, 0.4, 0.4),
+        }
+      );
+      yPosition -= 12;
+
+      page.drawText("GSTIN: 29AAECS8577R1ZM", {
+        x: margin.left,
+        y: yPosition,
+        size: 9,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+      yPosition -= 30;
+
+      // ===== INVOICE TITLE =====
+      page.drawText("TAX INVOICE", {
+        x: margin.left,
+        y: yPosition,
+        size: 16,
+        font: boldFont,
+        color: rgb(0, 0, 0),
+      });
+
+      page.drawText(invoiceData.invoiceNumber, {
+        x: width - margin.right - 100,
+        y: yPosition,
+        size: 12,
+        font: boldFont,
+      });
+      yPosition -= 25;
+
+      // ===== DATES =====
+      page.drawText(`Date: ${invoiceData.date}`, {
+        x: margin.left,
+        y: yPosition,
+        size: 10,
+        font,
+      });
+      page.drawText(`Due Date: ${invoiceData.dueDate}`, {
+        x: width - margin.right - 120,
+        y: yPosition,
+        size: 10,
+        font,
+      });
+      yPosition -= 20;
+
+      // ===== CLIENT =====
+      page.drawText("Bill To:", {
+        x: margin.left,
+        y: yPosition,
+        size: 10,
+        font: boldFont,
+      });
+      yPosition -= 15;
+
+      page.drawText(invoiceData.client.name, {
+        x: margin.left,
+        y: yPosition,
+        size: 10,
+        font: boldFont,
+      });
+      yPosition -= 25;
+
+      // ===== PROJECT =====
+      page.drawText("Project:", {
+        x: margin.left,
+        y: yPosition,
+        size: 10,
+        font: boldFont,
+      });
+      yPosition -= 15;
+
+      page.drawText(invoiceData.project.name, {
+        x: margin.left,
+        y: yPosition,
+        size: 10,
+        font,
+      });
+      yPosition -= 25;
+
+      // ===== TABLE HEADER =====
+      page.drawRectangle({
+        x: margin.left,
+        y: yPosition - 15,
+        width: contentWidth,
+        height: 20,
+        color: rgb(0.95, 0.95, 0.95),
+      });
+
+      page.drawText("Description", {
+        x: margin.left + 5,
+        y: yPosition - 10,
+        size: 10,
+        font: boldFont,
+      });
+      page.drawText("Amount", {
+        x: width - margin.right - 80,
+        y: yPosition - 10,
+        size: 10,
+        font: boldFont,
+      });
+      yPosition -= 30;
+
+      // ===== LINE ITEMS =====
+      for (const item of invoiceData.items) {
+        page.drawText(item.description, {
+          x: margin.left + 5,
+          y: yPosition,
+          size: 9,
+          font,
+        });
+        page.drawText(`Rs. ${item.amount.toLocaleString("en-IN")}`, {
+          x: width - margin.right - 80,
+          y: yPosition,
+          size: 9,
+          font,
+        });
+        yPosition -= 18;
+      }
+
+      yPosition -= 15;
+
+      // ===== SEPARATOR =====
+      page.drawLine({
+        start: { x: margin.left, y: yPosition },
+        end: { x: width - margin.right, y: yPosition },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8),
+      });
+      yPosition -= 20;
+
+      // ===== TOTALS =====
+      page.drawText("Subtotal:", {
+        x: width - margin.right - 200,
+        y: yPosition,
+        size: 10,
+        font: boldFont,
+      });
+      page.drawText(`Rs. ${invoiceData.subtotal.toLocaleString("en-IN")}`, {
+        x: width - margin.right - 80,
+        y: yPosition,
+        size: 10,
+        font: boldFont,
+      });
+      yPosition -= 20;
+
+      // Tax (if applicable)
+      if (invoiceData.tax > 0) {
+        page.drawText("GST (12%):", {
+          x: width - margin.right - 200,
+          y: yPosition,
+          size: 10,
+          font,
+        });
+        page.drawText(`Rs. ${invoiceData.tax.toLocaleString("en-IN")}`, {
+          x: width - margin.right - 80,
+          y: yPosition,
+          size: 10,
+          font,
+        });
+        yPosition -= 20;
+      }
+
+      // Total
+      page.drawLine({
+        start: { x: width - margin.right - 220, y: yPosition + 5 },
+        end: { x: width - margin.right, y: yPosition + 5 },
+        thickness: 2,
+        color: rgb(0, 0, 0),
+      });
+      yPosition -= 15;
+
+      page.drawText("Total:", {
+        x: width - margin.right - 200,
+        y: yPosition,
+        size: 12,
+        font: boldFont,
+      });
+      page.drawText(`Rs. ${invoiceData.total.toLocaleString("en-IN")}`, {
+        x: width - margin.right - 80,
+        y: yPosition,
+        size: 12,
+        font: boldFont,
+      });
+      yPosition -= 25;
+
+      // ===== PAYMENT DETAILS =====
+      if (invoiceData.advancePaid > 0) {
+        page.drawText("Advance Paid:", {
+          x: width - margin.right - 200,
+          y: yPosition,
+          size: 10,
+          font,
+          color: rgb(0, 0.6, 0),
+        });
+        page.drawText(
+          `Rs. ${invoiceData.advancePaid.toLocaleString("en-IN")}`,
+          {
+            x: width - margin.right - 80,
+            y: yPosition,
+            size: 10,
+            font,
+            color: rgb(0, 0.6, 0),
+          }
+        );
+        yPosition -= 20;
+
+        page.drawText("Balance Due:", {
+          x: width - margin.right - 200,
+          y: yPosition,
+          size: 11,
+          font: boldFont,
+          color: rgb(0.8, 0.5, 0),
+        });
+        page.drawText(`Rs. ${invoiceData.balanceDue.toLocaleString("en-IN")}`, {
+          x: width - margin.right - 80,
+          y: yPosition,
+          size: 11,
+          font: boldFont,
+          color: rgb(0.8, 0.5, 0),
+        });
+        yPosition -= 30;
+      }
+
+      // ===== TERMS =====
+      if (invoiceData.terms && yPosition > margin.bottom + 60) {
+        page.drawText("Terms & Conditions:", {
+          x: margin.left,
+          y: yPosition,
+          size: 10,
+          font: boldFont,
+        });
+        yPosition -= 15;
+
+        const termsLines = invoiceData.terms.split("\n");
+        for (const line of termsLines) {
+          if (yPosition < margin.bottom + 20) break;
+          page.drawText(line, {
+            x: margin.left,
+            y: yPosition,
+            size: 8,
+            font,
+            maxWidth: contentWidth,
+          });
+          yPosition -= 12;
+        }
+      }
+
+      // ===== FOOTER =====
+      page.drawText("Thank you for your business!", {
+        x: margin.left,
+        y: margin.bottom + 20,
+        size: 9,
+        font,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+
+      const pdfBytes = await pdfDoc.save();
+      return pdfBytes;
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      throw new Error("Failed to generate invoice PDF");
+    }
+  }
+
+  static async generateQuotation(
+    quotationData: QuotationData
+  ): Promise<Uint8Array> {
+    try {
+      const pdfDoc = await PDFDocument.create();
+      let page = pdfDoc.addPage([595, 842]);
+      const { width, height } = page.getSize();
+
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      const margin = { left: 40, right: 40, top: 60, bottom: 60 };
+      const contentWidth = width - margin.left - margin.right;
+      let yPosition = height - margin.top;
+
+      // ===== HEADER WITH TWO COLUMNS =====
+      page.drawText("Sculpture Studio", {
+        x: margin.left,
+        y: yPosition,
+        size: 16,
+        font: boldFont,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      page.drawText("QUOTATION", {
+        x: width - margin.right - 120,
+        y: yPosition,
+        size: 18,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.5),
+      });
+      yPosition -= 20;
+
+      page.drawText("#343/3, 13th 'B' Cross, Vyalikaval, Bangalore-560003", {
+        x: margin.left,
+        y: yPosition,
+        size: 9,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+
+      page.drawText(`Quotation No: ${quotationData.quotationNumber}`, {
+        x: width - margin.right - 120,
+        y: yPosition,
+        size: 10,
+        font: boldFont,
+      });
+      yPosition -= 12;
+
+      page.drawText(
+        `Phone: (+91) 9632390070 | Email: mdsculpturestudio@gmail.com`,
+        {
+          x: margin.left,
+          y: yPosition,
+          size: 9,
+          font,
+          color: rgb(0.3, 0.3, 0.3),
+        }
+      );
+
+      page.drawText(`Date: ${quotationData.date}`, {
+        x: width - margin.right - 120,
+        y: yPosition,
+        size: 9,
+        font,
+      });
+      yPosition -= 12;
+
+      page.drawText("GSTIN: 29AAECS8577R1ZM", {
+        x: margin.left,
+        y: yPosition,
+        size: 9,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+
+      page.drawText(`Valid Until: ${quotationData.validUntil}`, {
+        x: width - margin.right - 120,
+        y: yPosition,
+        size: 9,
+        font,
+      });
+      yPosition -= 30;
+
+      // ===== CLIENT & PROJECT DETAILS =====
+      const detailsY = yPosition;
+
+      // Client Details Box - Fill only (no border)
+      page.drawRectangle({
+        x: margin.left,
+        y: detailsY - 80,
+        width: contentWidth / 2 - 10,
+        height: 80,
+        color: rgb(0.97, 0.97, 0.97),
+      });
+
+      page.drawText("BILL TO:", {
+        x: margin.left + 5,
+        y: detailsY - 15,
+        size: 10,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+
+      page.drawText(quotationData.client.name, {
+        x: margin.left + 5,
+        y: detailsY - 30,
+        size: 11,
+        font: boldFont,
+      });
+
+      if (quotationData.client.address) {
+        const addressLines = quotationData.client.address.split("\n");
+        let addressY = detailsY - 45;
+        for (const line of addressLines) {
+          if (addressY < detailsY - 75) break;
+          page.drawText(line, {
+            x: margin.left + 5,
+            y: addressY,
+            size: 9,
+            font,
+          });
+          addressY -= 12;
+        }
+      }
+
+      // Project Details Box - Fill only (no border)
+      const projectBoxX = margin.left + contentWidth / 2 + 10;
+      page.drawRectangle({
+        x: projectBoxX,
+        y: detailsY - 80,
+        width: contentWidth / 2 - 10,
+        height: 80,
+        color: rgb(0.97, 0.97, 0.97),
+      });
+
+      if (quotationData.project.name) {
+        page.drawText("PROJECT:", {
+          x: projectBoxX + 5,
+          y: detailsY - 15,
+          size: 10,
+          font: boldFont,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+
+        page.drawText(quotationData.project.name, {
+          x: projectBoxX + 5,
+          y: detailsY - 30,
+          size: 11,
+          font: boldFont,
+        });
+
+        if (quotationData.project.type) {
+          page.drawText(`Type: ${quotationData.project.type}`, {
+            x: projectBoxX + 5,
+            y: detailsY - 45,
+            size: 9,
+            font,
+          });
+        }
+
+        if (quotationData.project.deadline) {
+          page.drawText(`Deadline: ${quotationData.project.deadline}`, {
+            x: projectBoxX + 5,
+            y: detailsY - 60,
+            size: 9,
+            font,
+          });
+        }
+      }
+
+      yPosition = detailsY - 100;
+
+      // ===== TABLE HEADERS =====
+      const tableHeaders = [
+        "No.",
+        "Description",
+        "HSN/SAC",
+        "Weight",
+        "Qty",
+        "Unit",
+        "Rate",
+        "Amount",
+      ];
+      const columnWidths = [25, 160, 45, 40, 30, 35, 60, 75];
+      let xOffset = margin.left;
+
+      // Table header background only (no border)
+      page.drawRectangle({
+        x: margin.left,
+        y: yPosition - 20,
+        width: contentWidth,
+        height: 25,
+        color: rgb(0.2, 0.2, 0.4),
+      });
+
+      // Header text
+      tableHeaders.forEach((header, i) => {
+        page.drawText(header, {
+          x: xOffset + (i === 0 ? 8 : 5),
+          y: yPosition - 15,
+          size: 8,
+          font: boldFont,
+          color: rgb(1, 1, 1),
+        });
+        xOffset += columnWidths[i];
+      });
+
+      yPosition -= 35;
+
+      // ===== LINE ITEMS =====
+      let itemNumber = 1;
+      for (const item of quotationData.items) {
+        // Check page overflow
+        if (yPosition < margin.bottom + 120) {
+          page = pdfDoc.addPage([595, 842]);
+          yPosition = height - margin.top;
+        }
+
+        xOffset = margin.left;
+
+        // Item number
+        page.drawText(itemNumber.toString(), {
+          x: xOffset + 8,
+          y: yPosition,
+          size: 9,
+          font,
+        });
+        xOffset += columnWidths[0];
+
+        // Main description
+        const mainDescription = item.name || item.description || "Item";
+        page.drawText(mainDescription, {
+          x: xOffset + 5,
+          y: yPosition,
+          size: 9,
+          font: boldFont,
+          maxWidth: columnWidths[1] - 10,
+        });
+
+        // Additional details below main description
+        let details = [];
+        if (item.material) details.push(`Material: ${item.material}`);
+        if (item.finish) details.push(`Finish: ${item.finish}`);
+        if (item.optionType) details.push(`Option: ${item.optionType}`);
+        if (item.notes) {
+          const words = item.notes.split(" ");
+          let currentLine = "";
+          for (const word of words) {
+            if ((currentLine + word).length > 50) {
+              details.push(currentLine.trim());
+              currentLine = word + " ";
+            } else {
+              currentLine += word + " ";
+            }
+          }
+          if (currentLine.trim()) details.push(currentLine.trim());
+        }
+
+        if (details.length > 0) {
+          let detailY = yPosition - 12;
+          for (const detail of details) {
+            if (detailY < yPosition - 36) break;
+            page.drawText(detail, {
+              x: xOffset + 5,
+              y: detailY,
+              size: 7,
+              font,
+              color: rgb(0.4, 0.4, 0.4),
+              maxWidth: columnWidths[1] - 10,
+            });
+            detailY -= 10;
+          }
+        }
+        xOffset += columnWidths[1];
+
+        // HSN/SAC Code
+        const hsnText = item.hsnSacCode || "-";
+        page.drawText(hsnText, {
+          x: xOffset,
+          y: yPosition,
+          size: 8,
+          font,
+        });
+        xOffset += columnWidths[2];
+
+        // WEIGHT COLUMN - Show estimated weight
+        const weightText =
+          item.estimatedWeight && item.estimatedWeight > 0
+            ? item.estimatedWeight.toString()
+            : "-";
+        page.drawText(weightText, {
+          x: xOffset + 5,
+          y: yPosition,
+          size: 8,
+          font,
+        });
+        xOffset += columnWidths[3];
+
+        // QUANTITY COLUMN
+        const qtyText = item.quantity ? item.quantity.toString() : "1";
+        page.drawText(qtyText, {
+          x: xOffset + 10,
+          y: yPosition,
+          size: 8,
+          font,
+        });
+        xOffset += columnWidths[4];
+
+        // Unit
+        const unitText = item.unit || "nos";
+        page.drawText(unitText, {
+          x: xOffset,
+          y: yPosition,
+          size: 8,
+          font,
+        });
+        xOffset += columnWidths[5];
+
+        // Rate (right aligned)
+        const rateText = item.rate
+          ? `Rs. ${item.rate.toLocaleString("en-IN")}`
+          : "-";
+        const rateWidth = font.widthOfTextAtSize(rateText, 8);
+        page.drawText(rateText, {
+          x: xOffset + columnWidths[6] - rateWidth - 5,
+          y: yPosition,
+          size: 8,
+          font,
+        });
+        xOffset += columnWidths[6];
+
+        // Amount (right aligned)
+        const amountText = `Rs. ${item.total.toLocaleString("en-IN")}`;
+        const amountWidth = font.widthOfTextAtSize(amountText, 8);
+        page.drawText(amountText, {
+          x: xOffset + columnWidths[7] - amountWidth - 5,
+          y: yPosition,
+          size: 8,
+          font: boldFont,
+        });
+
+        // Draw row border
+        page.drawLine({
+          start: { x: margin.left, y: yPosition - 8 },
+          end: { x: width - margin.right, y: yPosition - 8 },
+          thickness: 0.5,
+          color: rgb(0.9, 0.9, 0.9),
+        });
+
+        // Adjust Y position based on detail lines
+        const detailLines = Math.min(details.length, 2);
+        yPosition -= 20 + detailLines * 10;
+        itemNumber++;
+      }
+
+      yPosition -= 15;
+
+      // ===== TWO COLUMN LAYOUT: TERMS (LEFT) AND TOTALS (RIGHT) =====
+      const leftColumnWidth = contentWidth * 0.6;
+      const rightColumnWidth = contentWidth * 0.4;
+
+      // ===== TERMS & CONDITIONS (LEFT SIDE) =====
+      let termsY = yPosition;
+      if (quotationData.terms) {
+        page.drawText("Terms & Conditions:", {
+          x: margin.left,
+          y: termsY,
+          size: 10,
+          font: boldFont,
+        });
+        termsY -= 15;
+
+        const termsLines = quotationData.terms.split("\n");
+        for (const line of termsLines) {
+          if (termsY < margin.bottom + 100) break;
+          page.drawText(`• ${line.trim()}`, {
+            x: margin.left + 5,
+            y: termsY,
+            size: 8,
+            font,
+            maxWidth: leftColumnWidth - 10,
+          });
+          termsY -= 12;
+        }
+      }
+
+      // ===== TOTALS SECTION (RIGHT SIDE) =====
+      const totalsStartX = margin.left + leftColumnWidth + 20;
+      let totalsY = yPosition;
+
+      // Background for totals
+      page.drawRectangle({
+        x: totalsStartX - 10,
+        y: totalsY - 10,
+        width: rightColumnWidth,
+        height: quotationData.tax > 0 ? 90 : 70,
+        color: rgb(0.98, 0.98, 0.98),
+      });
+
+      // Border for totals box using lines
+      const totalsBox = {
+        x: totalsStartX - 10,
+        y: totalsY - 10,
+        width: rightColumnWidth,
+        height: quotationData.tax > 0 ? 90 : 70,
+      };
+
+      // Draw border manually
+      page.drawLine({
+        start: { x: totalsBox.x, y: totalsBox.y },
+        end: { x: totalsBox.x + totalsBox.width, y: totalsBox.y },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8),
+      });
+      page.drawLine({
+        start: { x: totalsBox.x, y: totalsBox.y + totalsBox.height },
+        end: {
+          x: totalsBox.x + totalsBox.width,
+          y: totalsBox.y + totalsBox.height,
+        },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8),
+      });
+      page.drawLine({
+        start: { x: totalsBox.x, y: totalsBox.y },
+        end: { x: totalsBox.x, y: totalsBox.y + totalsBox.height },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8),
+      });
+      page.drawLine({
+        start: { x: totalsBox.x + totalsBox.width, y: totalsBox.y },
+        end: {
+          x: totalsBox.x + totalsBox.width,
+          y: totalsBox.y + totalsBox.height,
+        },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8),
+      });
+
+      // Subtotal
+      page.drawText("Subtotal:", {
+        x: totalsStartX,
+        y: totalsY,
+        size: 10,
+        font: boldFont,
+      });
+      page.drawText(`Rs. ${quotationData.subtotal.toLocaleString("en-IN")}`, {
+        x: totalsStartX + rightColumnWidth - 70,
+        y: totalsY,
+        size: 10,
+        font: boldFont,
+      });
+      totalsY -= 20;
+
+      // Tax (dynamic - shows actual GST amount from database)
+      if (quotationData.tax > 0) {
+        // Calculate GST percentage for display (this is just for display, actual calculation comes from DB)
+        const gstPercentage =
+          quotationData.subtotal > 0
+            ? Math.round(
+                (quotationData.tax / quotationData.subtotal) * 100 * 100
+              ) / 100
+            : 0;
+
+        page.drawText(`GST (${gstPercentage}%):`, {
+          x: totalsStartX,
+          y: totalsY,
+          size: 10,
+          font,
+        });
+        page.drawText(`Rs. ${quotationData.tax.toLocaleString("en-IN")}`, {
+          x: totalsStartX + rightColumnWidth - 70,
+          y: totalsY,
+          size: 10,
+          font,
+        });
+        totalsY -= 20;
+      }
+
+      // Total separator
+      page.drawLine({
+        start: { x: totalsStartX, y: totalsY + 5 },
+        end: { x: totalsStartX + rightColumnWidth - 20, y: totalsY + 5 },
+        thickness: 1,
+        color: rgb(0, 0, 0),
+      });
+      totalsY -= 15;
+
+      // Total
+      page.drawText("Total:", {
+        x: totalsStartX,
+        y: totalsY,
+        size: 12,
+        font: boldFont,
+      });
+      page.drawText(`Rs. ${quotationData.total.toLocaleString("en-IN")}`, {
+        x: totalsStartX + rightColumnWidth - 70,
+        y: totalsY,
+        size: 12,
+        font: boldFont,
+      });
+
+      // ===== BANK DETAILS & SIGNATURE =====
+      const bottomY = Math.min(termsY, totalsY) - 40;
+
+      if (bottomY > margin.bottom + 60) {
+        // Bank Details (left side)
+        page.drawText("Bank Details:", {
+          x: margin.left,
+          y: bottomY,
+          size: 10,
+          font: boldFont,
+        });
+
+        const bankDetails = [
+          "Account Name: Sculpture Studio",
+          "Bank: [Your Bank Name]",
+          "Account No: [Your Account Number]",
+          "IFSC Code: [Your IFSC Code]",
+        ];
+
+        let bankY = bottomY - 15;
+        for (const detail of bankDetails) {
+          page.drawText(detail, {
+            x: margin.left + 5,
+            y: bankY,
+            size: 8,
+            font,
+          });
+          bankY -= 10;
+        }
+
+        // Signature (right side)
+        page.drawText("Authorized Signatory", {
+          x: width - margin.right - 120,
+          y: bottomY - 20,
+          size: 9,
+          font: boldFont,
+        });
+      }
+
+      // ===== FOOTER =====
+      page.drawText("Thank you for your business!", {
+        x: margin.left,
+        y: margin.bottom + 20,
+        size: 9,
+        font,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+
+      const pdfBytes = await pdfDoc.save();
+      return pdfBytes;
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      throw new Error("Failed to generate quotation PDF");
+    }
+  }
+
+  static async savePDF(
+    pdfBytes: Uint8Array,
+    filename: string
+  ): Promise<string> {
+    try {
+      const base64 = btoa(String.fromCharCode(...pdfBytes));
+      const dataUrl = `data:application/pdf;base64,${base64}`;
+      return dataUrl;
+    } catch (error) {
+      console.error("PDF save error:", error);
+      throw new Error("Failed to save PDF");
+    }
+  }
+
+  static generateInvoiceNumber(): string {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    return `INV-${year}${month}-${random}`;
+  }
+
+  static generateQuotationNumber(): string {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    return `QUO-${year}${month}-${random}`;
+  }
+}

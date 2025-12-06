@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { Toaster } from 'react-hot-toast'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -15,15 +16,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="h-full">
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-      </head>
-      <body className={`${inter.className} h-full overflow-hidden`}>
-        <div className="h-full w-full max-w-full overflow-hidden">
-          {children}
-        </div>
+    <html lang="en">
+      <body>
+        {children}
+        <Toaster position="top-right" />
       </body>
     </html>
   )
 }
+
